@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 
@@ -7,6 +8,9 @@ interface IUserActivityProposal {
     }
 
     function vote(bool accepted) external returns(Stage _stage);
+
+    function getUser() external view returns(address _address);
+    function getAmount() external view returns (uint256 amount);
 }
 
 contract UserActivityProposal is IUserActivityProposal {
@@ -22,7 +26,7 @@ contract UserActivityProposal is IUserActivityProposal {
     uint8 public rejectCountsLimit;
     address public user;
     string public name;
-    uint8 public amount;
+    uint256 public amount;
     Stage public stage;
     
     bool public managerAgreed;
@@ -44,9 +48,9 @@ contract UserActivityProposal is IUserActivityProposal {
         _;
     }
 
-    constructor(string memory _name, uint8 _amount, address _manager, uint8 _acceptedCountsLimit, uint8 _rejectCountsLimit) {
+    constructor(address _user, string memory _name, uint256 _amount, address _manager, uint8 _acceptedCountsLimit, uint8 _rejectCountsLimit) {
         manager = _manager;
-        user = msg.sender;
+        user=_user;
         name = _name;
         acceptedCountsLimit = _acceptedCountsLimit;
         rejectCountsLimit = _rejectCountsLimit;
@@ -84,5 +88,13 @@ contract UserActivityProposal is IUserActivityProposal {
     function getStage() public view returns (Stage _stage) {
         return stage;
     }
+
+     function getAmount() public view returns (uint256 _amount) {
+         return amount;
+     }
+
+     function getUser() public view returns (address _user) {
+         return user;
+     }
 
 }

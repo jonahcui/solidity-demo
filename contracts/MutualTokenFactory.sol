@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -26,9 +27,10 @@ contract MutualTokenFactory is Ownable {
 
      MutualToken mutualToken;
      MutualEscrowToken escrowToken;
-     mapping(address => UserState) userStates;
 
-     mapping(address => UserProposal) userJoinedProposal;
+     mapping(address => UserState) public userStates;
+
+     mapping(address => UserProposal) public userJoinedProposal;
 
      ProposalConfig config;
 
@@ -39,25 +41,55 @@ contract MutualTokenFactory is Ownable {
         config.rejectedCountLimit = 1;
     }
 
-    function join(uint8 amount, string calldata description) public returns(address _proposalAddress) {
+    event ProposalReCreated(address contractAddress);
+
+    event ProposalCreated(address contractAddress);
+
+    event ProposalDone(address proposal);
+
+    event ProposalReject(address proposal);
+
+    function join(uint256 amount, string calldata description) public returns(address _proposalAddress) {
         require(!userStates[msg.sender].joined, "account had been joined.");
+
         if(userJoinedProposal[msg.sender].exists) {
+            emit ProposalReCreated(address(userJoinedProposal[msg.sender].proposal));
             return address(userJoinedProposal[msg.sender].proposal);
         
         }
 
-        UserActivityProposal proposal = new UserActivityProposal(description, amount,  owner(), config.acceptedCountLimit, config.rejectedCountLimit);
+        UserActivityProposal proposal = new UserActivityProposal(msg.sender, description, amount,  owner(), config.acceptedCountLimit, config.rejectedCountLimit);
         userJoinedProposal[msg.sender].proposal = proposal;
+        userJoinedProposal[msg.sender].exists = true;
 
+        emit ProposalCreated(address(proposal));
         return address(userJoinedProposal[msg.sender].proposal);
     } 
 
-    function accept(address to) public returns(IUserActivityProposal.Stage stage) {
-        return IUserActivityProposal(to).vote(true);
+    function accept(address to) public {
+        IUserActivityProposal proposal = IUserActivityProposal(to);
+       IUserActivityProposal.Stage stage = proposal.vote(true);
+       if(stage == IUserActivityProposal.Stage.Done) {
+           uint256 tokenAmount = proposal.getAmount() / 2;
+           uint256 escrowTokenAmount = proposal.getAmount() - tokenAmount;
+
+           mutualToken.mint(proposal.getUser(), tokenAmount);
+           escrowToken.mint(proposal.getUser(), escrowTokenAmount);
+
+           emit ProposalDone(to);
+       }
     }
 
     function reject(address to) public returns(IUserActivityProposal.Stage stage) {
         return IUserActivityProposal(to).vote(false);
+    }
+
+    function getTokenAddress() public view returns (address _address) {
+        return address(mutualToken);
+    }
+
+    function getEscrowTokenAddress() public view returns (address _address) {
+        return address(escrowToken);
     }
 
 }
