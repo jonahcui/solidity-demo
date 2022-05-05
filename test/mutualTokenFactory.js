@@ -23,5 +23,17 @@ contract("MutualTokenFactory", accounts => {
 
         assert.isNotNull(result);
         assert.equal(true, userProposal.exists)
-    }) 
+    })
+
+    it("should vote successful when accept given a contract owner", async () => {
+        const mutualTokenFactory = await MutualTokenFactory.deployed({
+            from: accounts[0]
+        });
+
+        await mutualTokenFactory.join(1000, "test", {from: accounts[1]});
+        await mutualTokenFactory.userJoinedProposal.call(accounts[1]);
+
+        await mutualTokenFactory.accept({from: accounts[1]});
+
+    })
 })
