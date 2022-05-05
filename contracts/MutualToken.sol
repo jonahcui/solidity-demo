@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MutualToken is ERC20, Ownable {
 
-    constructor() ERC20("MutualToken", "MV") {
+    constructor() ERC20("MutualToken", "MV") Ownable() {
     }
 
     function mint(address to, uint256 amount) public onlyOwner {

@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface IUserActivityProposal {
+contract UserActivityProposal is Ownable {
+
     enum Stage {
-        Init, Voted, Done, Reject
+        Voted, Done, Reject
     }
-
-    function vote(bool accepted) external returns(Stage _stage);
-
-    function getUser() external view returns(address _address);
-    function getAmount() external view returns (uint256 amount);
-}
-
-contract UserActivityProposal is IUserActivityProposal {
 
     struct Vote {
         address user;
@@ -30,53 +24,49 @@ contract UserActivityProposal is IUserActivityProposal {
     Stage public stage;
     
     bool public managerAgreed;
+    bool public managerVoted;
     uint8 public acceptedCounts;
     uint8 public rejectCounts;
 
 
     mapping(address => Vote) voters;
 
-
-
-    modifier onlyManager() {
-        require(msg.sender == manager, "only manager can operate.");
-        _;
-    }
-
     modifier onlyStage(Stage _stage) {
         require(stage == _stage, "current stage can not operate");
         _;
     }
 
-    constructor(address _user, string memory _name, uint256 _amount, address _manager, uint8 _acceptedCountsLimit, uint8 _rejectCountsLimit) {
+    constructor(address _user, string memory _name, uint256 _amount, address _manager, uint8 _acceptedCountsLimit, uint8 _rejectCountsLimit) Ownable(){
         manager = _manager;
         user=_user;
         name = _name;
         acceptedCountsLimit = _acceptedCountsLimit;
         rejectCountsLimit = _rejectCountsLimit;
         amount = _amount;
+        stage = Stage.Voted;
     }
 
-    function vote(bool accepted) external override returns(Stage _stage) {
-        require(!voters[msg.sender].voted || msg.sender == manager);
+    function vote(address voter, bool accepted) public onlyOwner() onlyStage(Stage.Voted) returns(Stage _stage) {
+        require(!voters[voter].voted || voter == manager, "user has been voted.");
 
-        if(msg.sender == manager) {
-            managerAgreed = true;
+        if(voter == manager) {
+            managerVoted = true;
+            managerAgreed = accepted;
         } else if(accepted) {
             acceptedCounts = acceptedCounts + 1;
-            voters[msg.sender].voted = true;
-            voters[msg.sender].accepted = true;
+            voters[voter].voted = true;
+            voters[voter].accepted = true;
         } else {
-            acceptedCounts = acceptedCounts + 1;
-            voters[msg.sender].voted = true;
-            voters[msg.sender].accepted = true;
+            acceptedCounts = rejectCounts + 1;
+            voters[voter].voted = true;
+            voters[voter].accepted = false;
         }
 
-        if(managerAgreed && acceptedCounts >= acceptedCountsLimit) {
+        if(managerVoted && managerAgreed && acceptedCounts >= acceptedCountsLimit) {
             stage = Stage.Done;
         }
 
-        if(!managerAgreed || rejectCounts >= rejectCountsLimit) {
+        if(managerVoted && !managerAgreed && rejectCounts >= rejectCountsLimit) {
             stage = Stage.Reject;
         }
 
@@ -95,6 +85,10 @@ contract UserActivityProposal is IUserActivityProposal {
 
      function getUser() public view returns (address _user) {
          return user;
+     }
+
+     function getInfo() public view returns(string memory _info) {
+         return name;
      }
 
 }

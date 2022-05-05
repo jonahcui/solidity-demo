@@ -39,8 +39,10 @@ class App extends Component {
         MutualTokenFactory.abi,
         deployedNetwork && deployedNetwork.address
       );
+      const owner = await instance.methods.owner().call({from: accounts[0]});
+      console.log(owner);
 
-      this.setState({ web3, accounts, contract: instance });
+      this.setState({ web3, accounts, contract: instance, owner });
       this.loadTokenContract(web3, accounts, instance);
     } catch (error) {
       // Catch any errors for any of the above operations.
@@ -86,7 +88,8 @@ class App extends Component {
         <div className="App" style={{ marginTop: 20 }}>
           <Alert severity="success">
             Current Contract Address(合约账户地址):{" "}
-            {this.state.contract ? this.state.contract._address : null}
+            {this.state.contract ? this.state.contract._address : null},
+            Owner: {this.state.owner}
           </Alert>
           <Divider />
           <Alert severity="warning">

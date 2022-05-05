@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MutualEscrowToken is ERC20, Ownable {
 
-    constructor() ERC20("MutualEscrowToken", "MEV") {
+    constructor() ERC20("MutualEscrowToken", "MEV") Ownable() {
     }
 
     function mint(address to, uint256 amount) public onlyOwner {

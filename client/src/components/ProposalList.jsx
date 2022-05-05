@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Grid,
   List,
@@ -14,17 +14,14 @@ import UserActivityProposal from '../contracts/UserActivityProposal.json'
 
 const ProposalList = ({contract, account, web3}, context) => {
     const [searchAccount, setSearchAccount] = useState(account);
-    const [notFound, setNotFound] = useState(false);
-    const [proposalInfo, setProposalInfo] = useState({exists: false});
     const [info, setInfo] = useState(null);
 
     const refreshList = async () => {
         if(searchAccount != null) {
             setInfo(null);
             const result = await contract.methods.userJoinedProposal(searchAccount).call({from: searchAccount});
-            const proposalAddress = "0x1eDbB91BDAECF758b54963b8dE0044bD60D85387";
-            if(result) {
-                const proposalContract = new web3.eth.Contract(UserActivityProposal.abi, proposalAddress);
+            if(result && result.exists) {
+                const proposalContract = new web3.eth.Contract(UserActivityProposal.abi, result.proposal);
                 const acceptedCountsLimit = await proposalContract.methods.acceptedCountsLimit().call();
                 const rejectCountsLimit = await proposalContract.methods.rejectCountsLimit().call();
                 const user = await proposalContract.methods.user().call();
@@ -34,6 +31,18 @@ const ProposalList = ({contract, account, web3}, context) => {
                 const managerAgreed = await proposalContract.methods.managerAgreed().call();
                 const acceptedCounts = await proposalContract.methods.acceptedCounts().call();
                 const rejectCounts = await proposalContract.methods.rejectCounts().call();
+                console.log({
+                    acceptedCountsLimit,
+                    rejectCountsLimit,
+                    user,
+                    name,
+                    amount,
+                    stage,
+                    managerAgreed,
+                    acceptedCounts,
+                    rejectCounts,
+                    contract: proposalContract
+                })
 
                 setInfo({
                     acceptedCountsLimit,
@@ -44,13 +53,21 @@ const ProposalList = ({contract, account, web3}, context) => {
                     stage,
                     managerAgreed,
                     acceptedCounts,
-                    rejectCounts
+                    rejectCounts,
+                    contract: proposalContract
                 })
-            } else {
-                setNotFound(true);
-            }
+            }  
         }
     }
+    const agree = async () => {
+        if(!searchAccount || !info) {
+            return;
+        }
+        console.log(account, searchAccount);
+        const result = await contract.methods.accept(searchAccount).send({ from: account});
+        console.log(result);
+    }
+
   return (
     <List subheader={
     <ListSubheader>
@@ -67,23 +84,26 @@ const ProposalList = ({contract, account, web3}, context) => {
             <Grid container >
                 <Grid item xs={12}>
                     用户地址: {info.user}
+                    <Button onClick={agree}> 
+                        同意
+                    </Button>
                 </Grid>
                 <Grid item xs={12}>
                     用户描述: {info.name}
                 </Grid>
-                <Grid item xs={3}>
-                    用户申请金额: {info.amout}
+                <Grid item xs={6}>
+                    用户申请金额: {info.amount}
                 </Grid>
-                <Grid item xs={3}>
+                <Grid item xs={6}>
                     提案状态: {info.stage}
                 </Grid>
-                <Grid item xs={3}>
+                <Grid item xs={4}>
                     维护者同意状态: {info.managerAgreed ? '已同意': '未操作'}
                 </Grid>
-                <Grid item xs={3}>
+                <Grid item xs={4}>
                     已同意用户数/需要同意用户数: {info.acceptedCounts} / {info.acceptedCountsLimit}
                 </Grid>
-                <Grid item xs={3}>
+                <Grid item xs={4}>
                     已拒绝用户数/需要拒绝用户数: {info.rejectCounts} / {info.rejectCountsLimit}
                 </Grid>
             </Grid>
